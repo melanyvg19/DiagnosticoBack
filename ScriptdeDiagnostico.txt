@@ -1,0 +1,487 @@
+CREATE TABLE IF NOT EXISTS empresa (
+    nit_empresa VARCHAR(255) NOT NULL PRIMARY KEY,
+    nombre_empresa VARCHAR(255) DEFAULT NULL,
+    direccion_principal VARCHAR(255) DEFAULT NULL,
+    estado_empresa VARCHAR(10) DEFAULT NULL,
+    cantidad_sedes INT NOT NULL,
+    sector_economico VARCHAR(255) DEFAULT NULL,
+    alcance_comercial VARCHAR(255) DEFAULT NULL,
+    es_aliado BIT(1) DEFAULT NULL,
+    establecimientos_comerciales BIT(1) DEFAULT NULL,
+    tipo_empresa ENUM('Grande','Mediana','Microempresa','Pequeña') DEFAULT NULL
+) ENGINE=INNODB;
+
+CREATE TABLE IF NOT EXISTS usuario (
+    id_usuario INT NOT NULL AUTO_INCREMENT,
+    cargo VARCHAR(255) DEFAULT NULL,
+    correo_usuario VARCHAR(255) NOT NULL UNIQUE,
+    contrasena VARCHAR(255) DEFAULT NULL,
+    anios_vinculado INT NOT NULL,
+    role ENUM('ADMIN','CLIENTE','SUPERVISOR') DEFAULT NULL,
+    nombre_completo_usuario VARCHAR(255) DEFAULT NULL,
+    id_supervisor INT DEFAULT NULL,
+    estado_usuario VARCHAR(10) DEFAULT NULL,
+    nit_empresa VARCHAR(255) NOT NULL,
+    form_terminado BIT(1) DEFAULT b'0',
+    PRIMARY KEY (id_usuario),
+    CONSTRAINT fk_supervisor
+        FOREIGN KEY (id_supervisor) REFERENCES usuario(id_usuario),
+    CONSTRAINT fk_nit_empresa_usuario
+        FOREIGN KEY (nit_empresa) REFERENCES empresa(nit_empresa)
+) ENGINE=INNODB;
+
+CREATE TABLE IF NOT EXISTS refresh_token (
+    id_refresh_token BIGINT NOT NULL AUTO_INCREMENT,
+    expiry_date DATETIME(6) DEFAULT NULL,
+    token VARCHAR(255) DEFAULT NULL,
+    version BIGINT DEFAULT NULL,
+    id_usuario INT DEFAULT NULL UNIQUE,
+    PRIMARY KEY (id_refresh_token),
+    CONSTRAINT fk_usuario_token
+        FOREIGN KEY (id_usuario) REFERENCES usuario(id_usuario)
+) ENGINE=INNODB;
+
+
+
+CREATE TABLE IF NOT EXISTS conjunto_categoria (
+    id_conjunto_categoria BIGINT NOT NULL AUTO_INCREMENT,
+    nombre_conjunto_categoria VARCHAR(255) DEFAULT NULL,
+    puntuacion_total DOUBLE DEFAULT NULL,
+    fecha_aplicacion DATE DEFAULT NULL,
+    nit_empresa VARCHAR(255) NOT NULL,
+    PRIMARY KEY (id_conjunto_categoria),
+    INDEX (nit_empresa),
+    CONSTRAINT fk_nit_empresa_conjunto
+        FOREIGN KEY (nit_empresa) REFERENCES empresa(nit_empresa)
+) ENGINE=INNODB;
+
+
+CREATE TABLE IF NOT EXISTS categoria (
+    id_categoria INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    nombre_categoria VARCHAR(255) DEFAULT NULL,
+    numero_preguntas INT NOT NULL
+) ENGINE=INNODB;
+
+CREATE TABLE IF NOT EXISTS observacion (
+    id_observacion INT NOT NULL AUTO_INCREMENT,
+    id_categoria INT DEFAULT NULL,
+    texto_observacion VARCHAR(255) DEFAULT NULL,
+    nit_empresa VARCHAR(255) NOT NULL,
+    PRIMARY KEY (id_observacion),
+    CONSTRAINT fk_categoria_observacion
+        FOREIGN KEY (id_categoria) REFERENCES categoria(id_categoria),
+    CONSTRAINT fk_nit_empresa_observacion
+        FOREIGN KEY (nit_empresa) REFERENCES empresa(nit_empresa)
+) ENGINE=INNODB;
+
+
+
+CREATE TABLE IF NOT EXISTS tipo_pregunta (
+    id_tipo_pregunta INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    nombre_tipo VARCHAR(255) DEFAULT NULL
+) ENGINE=INNODB;
+
+
+CREATE TABLE IF NOT EXISTS pregunta (
+    id_pregunta INT NOT NULL AUTO_INCREMENT,
+    id_tipo_pregunta INT NOT NULL,
+    id_categoria INT NOT NULL,
+    nombre_pregunta VARCHAR(255) DEFAULT NULL,
+    PRIMARY KEY (id_pregunta),
+    CONSTRAINT fk_tipo_pregunta
+        FOREIGN KEY (id_tipo_pregunta) REFERENCES tipo_pregunta(id_tipo_pregunta),
+    CONSTRAINT fk_categoria
+        FOREIGN KEY (id_categoria) REFERENCES categoria(id_categoria)
+) ENGINE=INNODB;
+
+CREATE TABLE IF NOT EXISTS pregunta_repetida (
+    id_pregunta_repetida INT NOT NULL AUTO_INCREMENT,
+    id_categoria INT DEFAULT NULL,
+    id_pregunta INT DEFAULT NULL,
+    PRIMARY KEY (id_pregunta_repetida),
+    CONSTRAINT fk_categoria_repetida
+        FOREIGN KEY (id_categoria) REFERENCES categoria(id_categoria),
+    CONSTRAINT fk_pregunta_repetida
+        FOREIGN KEY (id_pregunta) REFERENCES pregunta(id_pregunta)
+) ENGINE=INNODB;
+
+
+
+CREATE TABLE IF NOT EXISTS tipo_opcion (
+    id_tipo_opcion INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    tipo_opcion VARCHAR(255) DEFAULT NULL
+) ENGINE=INNODB;
+
+
+CREATE TABLE IF NOT EXISTS opcion (
+    id_opcion INT NOT NULL AUTO_INCREMENT,
+    texto_opcion VARCHAR(255) DEFAULT NULL,
+    puntuacion FLOAT NOT NULL,
+    id_pregunta INT NOT NULL,
+    id_tipo_opcion INT DEFAULT NULL,
+    PRIMARY KEY (id_opcion),
+    CONSTRAINT fk_pregunta
+        FOREIGN KEY (id_pregunta) REFERENCES pregunta(id_pregunta),
+    CONSTRAINT fk_tipo_opcion
+        FOREIGN KEY (id_tipo_opcion) REFERENCES tipo_opcion(id_tipo_opcion)
+) ENGINE=INNODB;
+
+
+CREATE TABLE IF NOT EXISTS formulario (
+    id_formulario BIGINT NOT NULL AUTO_INCREMENT,
+    id_categoria INT NOT NULL,
+    id_pregunta INT NOT NULL,
+    id_opcion INT NOT NULL,
+    fecha_aplicacion DATETIME(6) DEFAULT NULL,
+    nit_empresa VARCHAR(255) NOT NULL,
+    PRIMARY KEY (id_formulario),
+    CONSTRAINT fk_categoria_formulario
+        FOREIGN KEY (id_categoria) REFERENCES categoria(id_categoria),
+    CONSTRAINT fk_pregunta_formulario
+        FOREIGN KEY (id_pregunta) REFERENCES pregunta(id_pregunta),
+    CONSTRAINT fk_opcion_formulario
+        FOREIGN KEY (id_opcion) REFERENCES opcion(id_opcion),
+    CONSTRAINT fk_nit_empresa_formulario
+        FOREIGN KEY (nit_empresa) REFERENCES empresa(nit_empresa)
+) ENGINE=INNODB;
+
+
+CREATE TABLE IF NOT EXISTS respuesta_abierta (
+    id_respuesta_abierta INT NOT NULL AUTO_INCREMENT,
+    id_formulario BIGINT NOT NULL,
+    id_opcion INT NOT NULL,
+    respuesta_texto VARCHAR(255) DEFAULT NULL,
+    PRIMARY KEY (id_respuesta_abierta),
+    CONSTRAINT fk_formulario_respuesta
+        FOREIGN KEY (id_formulario) REFERENCES formulario(id_formulario),
+    CONSTRAINT fk_opcion_respuesta
+        FOREIGN KEY (id_opcion) REFERENCES opcion(id_opcion)
+) ENGINE=INNODB;
+
+CREATE TABLE IF NOT EXISTS puntuacion_total (
+    id_puntuacion_total BIGINT NOT NULL AUTO_INCREMENT,
+    puntuacion_total FLOAT DEFAULT NULL,
+    id_categoria INT NOT NULL,
+    comentario VARCHAR(1000) DEFAULT NULL,
+    fecha_aplicacion DATETIME(6) DEFAULT NULL,
+    nit_empresa VARCHAR(255) NOT NULL,
+    PRIMARY KEY (id_puntuacion_total),
+    CONSTRAINT fk_categoria_puntuacion
+        FOREIGN KEY (id_categoria) REFERENCES categoria(id_categoria),
+    CONSTRAINT fk_nit_empresa_puntuacion
+        FOREIGN KEY (nit_empresa) REFERENCES empresa(nit_empresa)
+) ENGINE=INNODB;
+
+
+CREATE TABLE IF NOT EXISTS glosario (
+    id_glosario INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    imagen VARCHAR(255) DEFAULT NULL,
+    nombre_glosario VARCHAR(255) DEFAULT NULL,
+    texto_glosario VARCHAR(1000) DEFAULT NULL
+) ENGINE=INNODB;
+
+INSERT INTO categoria (id_categoria, nombre_categoria, numero_preguntas) VALUES
+(100, 'Cultura Organizacional', 12),
+(101, 'Personas', 3),
+(102, 'Infraestructura', 4),
+(103, 'Procesos', 14),
+(104, 'Marketing Mix', 5),
+(105, 'Bases de datos', 7),
+(106, 'Tableros', 4),
+(107, 'Automatizacion', 3),
+(108, 'Paginas Web', 7),
+(109, 'Aplicaciones', 2);
+
+INSERT INTO glosario (id_glosario, imagen, nombre_glosario, texto_glosario) VALUES
+(1, '/icons/ArrowsClockwise.svg', 'Gestión del cambio', 'Busca facilitar y conseguir la implementación exitosa de los procesos de transformación, lo que implica trabajar con y para las personas en la aceptación y asimilación de los cambios y en la reducción de la resistencia, facilitando la aceptación y ...'),
+(2, '/icons/WifiHigh.svg', 'Conectividad', 'Es la interconexión de toda cadena de valor vía móvil o banda ancha, permite sincronizar cadenas logísticas, acortar plazos de entrega y ciclos de innovación. Es la clave de la transformación digital, la red es fundamental para asegurar agilidad, s...'),
+(3, '/icons/Computer.svg', 'Información digital', 'Disponibilidad de la información digital en la empresa en las etapas: captura, procesamiento y análisis de la información digital, que permite mejorar las predicciones y toma de decisiones. Implica acceso a todo tipo de información de forma instantá...'),
+(4, '/icons/AnaliticaNegocios.svg', 'Analítica de negocios', 'Son los conocimientos, tecnologías y prácticas para la investigación y exploración continuamente interactiva del rendimiento del negocio para ganar visión y capacidad de dirección en la planificación del negocio. Es un proceso asistido por tecnolo...'),
+(5, '/icons/IoT.svg', 'IoT - Internet de las cosas', 'Interconexión digital de objetos cotidianos con internet, es la conexión a internet más con objetos que con personas, también se puede conocer como internet de todas las cosas o internet en las cosas. Si los objetos en la vida cotidiana tuvieran inco...'),
+(6, '/icons/DesktopTower.svg', 'Transformación digital', 'Parte del cambio de naturaleza e productos y servicios de las empresas tradicionales., es la oportunidad estratégica de incorporar nuevas tecnologías, pero sobre todo nuevas lógicas, para que el negocio sea más eficiente y permita nuevas oportunidade...'),
+(7, '/icons/Robot.svg', 'Automatización', 'La automatización de procesos en la organización de tareas y en los planes de negocio permite ganar en autonomía y flexibilidad en el funcionamiento interno y ofrecer un servicio y un producto flexible, adaptado y escalable a nuestro entorno.'),
+(8, '/icons/Bank.svg', 'Inteligencia de negocios', 'Habilidad de aprender las relaciones de hechos presentados de forma que guíen las acciones hacia una meta deseada. Es un término sombrilla que incluye aplicaciones, infraestructura, herramientas y las mejores prácticas que facilitan el acceso y análi...'),
+(9, '/icons/ShieldChevron.svg', 'Ciberseguridad', 'El conjunto de todas las posibles acciones y herramientas que busca proteger de amenazas digitales toda la infraestructura de una organización como redes, software, datos y equipos.'),
+(10, '/icons/HeadCircuit.svg', 'IA - Inteligencia artificial', 'Se refiere a cualquier técnica que permita a las computadoras imitar la inteligencia humana usando lógica, reglas, árboles de decisión y aprendizaje automático.'),
+(11, '/icons/FileCloud.svg', 'Computación en la nube - Cloud computing', 'Un modelo que permite el acceso bajo demanda a través de la Red a un conjunto compartido de recursos de computación configurables (redes, servidores, almacenamiento, aplicaciones y servicios) que se pueden aprovisionar rápidamente con el mínimo esfue...'),
+(12, '/icons/BigData.svg', 'Big data', 'Conjunto de estrategias, tecnologías y sistemas para el almacenamiento, procesamiento, análisis y visualización de conjuntos de datos complejos, que frecuentemente, pero no siempre, viene definida por volumen, velocidad y variedad.');
+
+
+INSERT INTO opcion (id_opcion, texto_opcion, puntuacion, id_pregunta, id_tipo_opcion) VALUES
+(400, 'Sí', 1, 300, 900),
+(401, 'No', 0, 300, 900),
+(402, 'Sí', 1, 301, 900),
+(403, 'No', 0, 301, 900),
+(404, 'Sí', 1, 302, 900),
+(405, 'No', 0, 302, 900),
+(406, 'No', 0, 303, 900),
+(407, 'Sí, se firma un documento físico', 0.25, 303, 900),
+(408, 'Se diligencia con cada uno un archivo y se almacena (archivo plano)', 0.5, 303, 900),
+(409, 'Se diligencia uno a uno mediante canal digital (correo electrónico o link WhatsApp)', 0.75, 303, 900),
+(410, 'Mediante un software especializado (p.e. CRM)', 1, 303, 900),
+(411, 'Sí', 1, 304, 900),
+(412, 'No', 0, 304, 900),
+(413, 'Sí', 1, 305, 900),
+(414, 'No', 0, 305, 900),
+(415, 'Sí', 1, 306, 900),
+(416, 'No', 0, 306, 900),
+(417, 'Sí', 1, 307, 900),
+(418, 'No', 0, 307, 900),
+(419, 'No sé cómo definirla', 0, 308, 900),
+(420, 'La defino de acuerdo a lo que observe en el día a día', 0.3, 308, 900),
+(421, 'Reúno datos en archivos (tipo Excel), voy registrando y revisando (gráficos)', 0.6, 308, 900),
+(422, 'Mediante tableros en un aplicativo', 1, 308, 900),
+(423, 'En lo que se observa del día a día, de acuerdo a los requerimientos o solicitudes realizadas', 0, 309, 900),
+(424, 'En comités o reuniones periódicas con el equipo de trabajo', 0.3, 309, 900),
+(425, 'Asesor externo que apoya la toma de decisiones', 0.3, 309, 900),
+(426, 'Mediante informes independientes y esporádicos de las áreas a analizar', 0.6, 309, 900),
+(427, 'Con la revisión del reporte consolidado que recibe del área de tecnología', 1, 309, 900),
+(428, 'Crecimiento y decrecimiento en ventas', 0.0526316, 310, 900),
+(429, 'Crecimiento y decrecimiento en costos', 0.0526316, 310, 900),
+(430, 'Retorno sobre la inversión-ROI', 0.0526316, 310, 900),
+(431, 'Porcentaje de rotación del personal (por áreas)', 0.0526316, 310, 900),
+(432, 'Tiempos de producción o servucción', 0.0526316, 310, 900),
+(433, 'Porcentaje de fidelización de la compra (tasa de recompra)', 0.0526316, 310, 900),
+(434, 'Costo de adquisición de un cliente', 0.0526316, 310, 900),
+(435, 'Conversión de clientes en canales digitales', 0.0526316, 310, 900),
+(436, 'ROA: Relación de beneficios de inversión en activos totales', 0.0526316, 310, 900),
+(437, 'Seguimiento al cumplimiento de metas y objetivos estratégicos', 0.0526316, 310, 900),
+(438, 'Inversión en mercado y comunicaciones', 0.0526316, 310, 900),
+(439, 'Productos/servicios con mayor o menor rotación', 0.0526316, 310, 900),
+(440, 'Caracterización de los clientes (Georreferenciación, buyer persona)', 0.0526316, 310, 900),
+(441, 'Indicadores de quejas y reclamos', 0.0526316, 310, 900),
+(442, 'Tiempos de respuesta a clientes', 0.0526316, 310, 900),
+(443, 'Volumen de ventas por canales (digital, locales comerciales, vendedores, entre otros)', 0.0526316, 310, 900),
+(444, 'Trazabilidad del talento (retención del talento, horas de ausentismo, incapacidades)', 0.0526316, 310, 900),
+(445, 'Seguimiento de inventario de materia prima', 0.0526316, 310, 900),
+(446, 'Seguimiento de porcentaje de capacidad instalada y ocupada', 0.0526316, 310, 900),
+(447, 'Ninguna de las anteriores', 0, 310, 901),
+(448, 'Sí', 1, 311, 900),
+(449, 'No', 0, 311, 900),
+(450, 'Uso de herramientas ofimáticas', 0.1, 312, 900),
+(451, 'Conocimiento y aplicación de metodologías ágiles', 0.1, 312, 900),
+(452, 'Uso de herramientas para el agilismo en el seguimiento de proyectos', 0.1, 312, 900),
+(453, 'Gestión de la innovación', 0.1, 312, 900),
+(454, 'Liderazgo en transformación digital de la empresa', 0.1, 312, 900),
+(455, 'Gestión de proyectos internos para la transformación digital', 0.2, 312, 900),
+(456, 'Desarrollo de proyectos internos para la transformación digital (Definir qué temáticas)', 0.3, 312, 900),
+(457, 'No se tiene definido a nadie para ello', 0, 313, 900),
+(459, 'No y no hay encargados de dichas áreas', 0, 314, 900),
+(460, 'No, se tienen algunas personas encargadas con tareas relacionadas a tecnología y transformación digital', 0, 314, 900),
+(461, 'Sí, es un área independiente y con autonomía organizacional', 1, 314, 900),
+(462, 'Sistema POS (Sistema para registro en caja)', 0.2, 315, 900),
+(463, 'SAAS -Software as a service: Infraestructura y servicios', 0.2, 315, 900),
+(464, 'IAAS - Infraestructura as a service (Infraestructura)', 0.2, 315, 900),
+(465, 'PAAS - Plataforma as a service (Plataforma)', 0.2, 315, 900),
+(466, 'Proveedor para desarrollo de soluciones de software', 0.2, 315, 900),
+(468, 'Ninguno', 0, 315, 901),
+(469, 'No cuento con ningún tipo de servidor', 0, 316, 900),
+(470, 'Cuento con una infraestructura local', 0.3, 316, 900),
+(471, 'Cuento con una infraestructura en la nube', 0.5, 316, 900),
+(472, 'Cuento tanto con infraestructura local como en la nube', 1, 316, 900),
+(473, 'Sí', 1, 317, 900),
+(474, 'No', 0, 317, 900),
+(475, 'Servidor local: está dentro de un hardware particular, por ejemplo un computador', 0, 318, 900),
+(476, 'Servidor en la nube (Amazon, Firebase, Microsoft, entre otros)', 1, 318, 900),
+(477, 'Archivos físicos', 0, 319, 900),
+(478, 'En archivos planos (Excel)', 0.3, 319, 900),
+(479, 'Híbrido (físico y digital)', 0.3, 319, 900),
+(480, 'Plataforma digital propia', 0.6, 319, 900),
+(481, 'Plataforma de software de tercero', 1, 319, 900),
+(482, 'Externo o tercero', 0.3, 320, 900),
+(483, 'Líder del proceso', 0.9, 320, 900),
+(484, 'Operario asignado', 0.9, 320, 900),
+(485, 'Personal del área de tecnología', 1, 320, 900),
+(486, 'Menos del 25% de los procesos', 0.25, 321, 900),
+(487, 'Menos del 50% de los procesos', 0.5, 321, 900),
+(488, 'Menos del 75% de los procesos', 0.75, 321, 900),
+(489, 'El 100% de los procesos', 1, 321, 900),
+(490, 'Menos de 2 (dos) horas por semana', 1, 322, 900),
+(491, 'Entre 2 y 10 horas por semana', 0.6, 322, 900),
+(492, 'Entre 10 y 20 horas por semana', 0.3, 322, 900),
+(493, 'Más de 20 horas por semana', 0, 322, 900),
+(494, 'Cada vez imprime la hoja, registra los datos y la guarda física o digitalmente', 0, 323, 900),
+(495, 'En cada archivo/carpeta registra archivos', 0.6, 323, 900),
+(496, 'Diligencia un software o plataforma instalada', 1, 323, 900),
+(497, 'Externo o tercero', 0, 324, 900),
+(498, 'Líder del proceso', 0.6, 324, 900),
+(499, 'Personal del área de tecnología', 1, 324, 900),
+(500, 'Dirección general/administrativa', 0.1112, 325, 900),
+(501, 'Financiera', 0.1112, 325, 900),
+(502, 'Comercial', 0.1112, 325, 900),
+(503, 'Talento', 0.1112, 325, 900),
+(504, 'Operación', 0.1112, 325, 900),
+(505, 'Producción', 0.1112, 325, 900),
+(506, 'Mercadeo/Servicio al cliente', 0.1112, 325, 900),
+(507, 'Tecnología', 0.1112, 325, 900),
+(508, 'Innovación/Desarrollo de negocios', 0.1112, 325, 900),
+(510, 'No tengo identificados los procesos en la empresa', 0, 326, 900),
+(511, 'No tengo identificada la efectividad de los procesos en la empresa', 0.2, 326, 900),
+(512, 'Tengo identificado que algunos procesos en la empresa generan sobrecostos', 0.5, 326, 900),
+(513, 'Se tiene identificado en por lo menos un proceso de la empresa excesiva cantidad de actividades asignadas', 0.7, 326, 900),
+(514, 'Tengo métricas precisas con respecto a la efectividad de los procesos en la empresa identificando cuáles generan reprocesos y cuáles no', 1, 326, 900),
+(515, 'No se tiene identificado ningún proceso cuyo desarrollo afecta de manera negativa o retrasa directamente otro proceso', 0, 327, 900),
+(516, 'Se tiene identificado por lo menos un proceso cuyo desarrollo afecta de manera negativa o retrasa directamente a otro', 0.5, 327, 900),
+(517, 'Se tiene identificado dos o más procesos cuyo desarrollo afecta de manera negativa o retrasa directamente otros procesos', 1, 327, 900),
+(518, 'Identifica por lo menos un proceso simple en el cual se está invirtiendo mucho tiempo para su ejecución', 0.25, 328, 900),
+(519, 'Identifica por lo menos un proceso simple en el cual están involucrados muchos colaboradores de la organización', 0.25, 328, 900),
+(520, 'Identifica que se tiene por lo menos un proceso simple que está generando sobrecostos para la organización', 0.25, 328, 900),
+(521, 'Se tiene identificado un proceso simple pero demandante rutinario y repetitivo (p.e. misma hora)', 0.25, 328, 900),
+(522, 'No se tiene identificado alargamiento en ningun proceso', 0, 328, 900),
+(523, 'Pago en efectivo', 0, 329, 900),
+(524, 'Consignaciones y envío de comprobantes', 0.3, 329, 900),
+(525, 'Transferencia electrónica y envío de comprobante', 0.6, 329, 900),
+(526, 'Datáfono', 0.9, 329, 900),
+(527, 'Link por pasarela de pagos', 1, 329, 900),
+(528, 'Muy satisfecho', 1, 330, 900),
+(529, 'Satisfecho', 0.8, 330, 900),
+(530, 'Ni satisfecho ni insatisfecho', 0.6, 330, 900),
+(531, 'Insatisfecho', 0.4, 330, 900),
+(532, 'Muy insatisfecho', 0.2, 330, 900),
+(533, 'Involucra varias áreas dentro de una misma organización', 0.25, 331, 900),
+(534, 'Tiene definidos pasos que dependen de otros para avanzar', 0.25, 331, 900),
+(535, 'Su desarrollo involucra a más de un colaborador dentro o fuera de la misma organización', 0.25, 331, 900),
+(536, 'El proceso sufre modificaciones sustanciales constantemente', 0.25, 331, 900),
+(537, 'Ninguna de las anteriores', 0, 331, 901),
+(538, 'Financiera', 0.17, 332, 900),
+(539, 'Comercial', 0.17, 332, 900),
+(540, 'Jurídica', 0.17, 332, 900),
+(541, 'Operativa', 0.17, 332, 900),
+(542, 'Talento/Gestión humana', 0.17, 332, 900),
+(543, 'Dirección general/estrategia', 0.17, 332, 900),
+(545, 'En ninguna', 0, 332, 901),
+(546, 'Catálogo físico', 0.067, 333, 900),
+(547, 'Publicidad en prensa escrita', 0.067, 333, 900),
+(548, 'Vallas publicitarias', 0.067, 333, 900),
+(549, 'Redes sociales', 0.067, 333, 900),
+(550, 'Envío de correos electrónicos', 0.2, 333, 900),
+(551, 'Mensaje de texto o WhatsApp', 0.2, 333, 900),
+(552, 'Llamada telefónica', 0.067, 333, 900),
+(553, 'Voz a voz', 0.067, 333, 900),
+(554, 'Página web', 0.2, 333, 900),
+(556, 'Ninguna de las anteriores', 0, 333, 901),
+(557, 'No tengo forma de conocer esa información', 0, 334, 900),
+(558, 'Mediante monitoreo y registro en formatos o archivos internos', 0.25, 334, 900),
+(559, 'Informes periódicos que presentan los agentes comerciales', 0.25, 334, 900),
+(560, 'Mediante informes de redes sociales', 0.25, 334, 900),
+(561, 'Lo identifico con el Google Analytics', 0.25, 334, 900),
+(562, 'Oferta de productos y servicios predefinidos', 0.5, 335, 900),
+(563, 'Oferta de productos y servicios personalizables que requieren acompañamiento de una persona', 0, 335, 900),
+(564, 'Oferta de productos y servicios personalizables que no requieren acompañamiento de una persona', 0.5, 335, 900),
+(565, 'Aumentando el número de visitas a clientes', 0, 336, 900),
+(566, 'Aumentando el número de llamadas a clientes', 0, 336, 900),
+(567, 'Realizando eventos presenciales', 0.3, 336, 900),
+(568, 'Comprando bases de datos y segmentando para identificar nuevos clientes', 0.5, 336, 900),
+(569, 'Aplicando estrategias de marketing digital 360 (Página web, mailing, generación de contenidos, entre otros)', 1, 336, 900),
+(570, 'Descripción corporativa', 0.1, 337, 900),
+(571, 'Descripción del portafolio y/o servicios de la compañía', 0.1, 337, 900),
+(572, 'Enlace para comunicación directa con algún agenda comercial', 0.1, 337, 900),
+(573, 'Registro a la base de datos de la compañía', 0.1, 337, 900),
+(574, 'Disponibilidad del portafolio de productos y/o servicios para la venta mediante este canal', 0.1, 337, 900),
+(575, 'Pago mediante link en la misma plataforma', 0.1, 337, 900),
+(576, 'Contenido de interés para la lectura de los clientes (Textos o videos)', 0.1, 337, 900),
+(577, 'Gestión de calendario para agendamiento de citas con colaboradores de la compañía', 0.1, 337, 900),
+(578, 'Carga, descarga de documentos (Envío de comprobantes o descarga de certificados)', 0.1, 337, 900),
+(579, 'Redireccionar a otras páginas web o sitios de interés para el público objetivo', 0.1, 337, 900),
+(580, 'Ninguna de las anteriores', 0, 337, 901),
+(809, 'Se tiene definido un rol/cargo.', 1, 313, 900);
+
+INSERT INTO pregunta (id_pregunta, id_tipo_pregunta, id_categoria, nombre_pregunta) VALUES
+(300, 200, 100, '¿Tienen claridad dentro de la organización de los conceptos en transformación digital y sus etapas de integración?'),
+(301, 200, 100, '¿Cuentan con correo electrónico institucional?'),
+(302, 200, 100, '¿Cuentan con página web institucional?'),
+(303, 200, 100, '¿Tienen implementada una política de tratamiento de datos con los stakeholders (clientes, proveedores, competencia, colaboradores)?'),
+(304, 200, 100, '¿Tienen un área o colaborador dentro de la organización que lidere el proceso de transformación digital?'),
+(305, 200, 100, '¿Tienen definidas políticas para la transformación digital en la organización?'),
+(306, 200, 100, '¿Tiene asignado un presupuesto para la transformación digital de la organización?'),
+(307, 200, 100, '¿Domina la organización alguna de las siguientes metodologías de agilismo para el desarrollo de sus retos internos?: Lean, Scrum, Kanban, XP-Xtreme Programming, OKR'),
+(308, 200, 100, '¿Cómo sabes identificar el estado actual de tu empresa o área?'),
+(309, 200, 100, '¿En qué criterio te basas para la toma de decisiones?'),
+(310, 201, 100, '¿Puedes identificar cuál de las siguientes variables tienes conocimiento y control?'),
+(311, 200, 100, '¿Aplica alguna de las siguientes tecnologías emergentes dentro de los procesos en la organización?'),
+(312, 201, 101, 'Nivel de formación de los colaboradores para la transformación digital'),
+(313, 200, 101, '¿Quién tiene el poder de decisión para inversiones en tecnología?'),
+(314, 200, 101, '¿Cuenta con su empresa con un área encargada en tecnología o transformación digital?'),
+(315, 201, 102, 'Cuenta con empresas aliadas y/o proveedores de tecnología (Hardware, Software - Licencias) para:'),
+(316, 200, 102, '¿Con qué tipo de servidor o infraestructura cuenta?'),
+(317, 200, 102, '¿Aplican alguna herramienta para gestionar el agilismo en la organización?'),
+(318, 200, 102, '¿En caso de ser digital, cuáles son las características del almacenamiento?'),
+(319, 200, 103, '¿Cómo registra y guarda las variables de la empresa?'),
+(320, 200, 103, '¿Quién registra los datos?'),
+(321, 200, 103, '¿Cuántos procesos están involucrados en el registro de los datos?'),
+(322, 200, 103, '¿Cuánto tiempo en promedio gasta cada uno de los encargados en el registro de los datos por cada proceso?'),
+(323, 200, 103, '¿Cómo administra los datos?'),
+(324, 200, 103, '¿Quién administra o consulta los datos?'),
+(325, 201, 103, '¿Cuál de las siguientes áreas percibe usted puede ser la más prioritaria para monitorear a través de una herramienta que integre la información para la toma de decisiones?'),
+(326, 200, 103, 'Mapeo de la efectividad de los procesos'),
+(327, 200, 103, 'Afectación de los procesos'),
+(328, 201, 103, 'Alargamiento de procesos simples'),
+(329, 200, 103, '¿Cuáles de los siguientes son los canales de pago mediante los cuales hoy recauda los cobros de sus clientes?'),
+(330, 200, 103, '¿Qué tan satisfecho se encuentra con la forma de pago anteriormente mencionada para el recaudo de cobro a sus clientes?'),
+(331, 201, 103, 'Identifica en su organización algún o algunos procesos que se caractericen por:'),
+(332, 201, 103, '¿Cuál de los siguientes macroprocesos en su organización involucra las características anteriormente mencionadas? (Puede elegir varias)'),
+(333, 201, 104, '¿Por cuáles de los siguientes canales usted expone sus productos o servicios a sus clientes?'),
+(334, 201, 104, '¿A qué cantidad de público identifica que llega su oferta a través de los canales anteriormente mencionados?'),
+(335, 201, 104, '¿Cuál es la naturaleza de la oferta que mejor describe su portafolio?'),
+(336, 200, 104, '¿Cuál es la principal estrategia que hoy lidera el aumento de sus ventas?'),
+(337, 201, 104, 'Considerando un canal digital para la venta de sus productos y servicios a su mercado objetivo ¿Cuál de las siguientes funcionalidades esperaría encontrar en un espacio digital corporativo? (puede elegir varias)'),
+(338, 200, 105, '¿Cómo registra y guarda las variables de la empresa?'),
+(339, 200, 105, '¿Quién registra los datos?'),
+(340, 200, 105, '¿Cuántos procesos están involucrados en el registro de los datos?'),
+(341, 200, 105, '¿Cuánto tiempo en promedio gasta cada uno de los encargados en el registro de los datos por cada proceso?'),
+(342, 200, 105, '¿Cómo administra los datos?'),
+(343, 200, 105, '¿Cuenta con su empresa con un área encargada en tecnología o transformación digital?'),
+(344, 200, 105, '¿En caso de ser digital, cuáles son las características del almacenamiento?'),
+(345, 200, 106, '¿Cómo sabes identificar el estado actual de tu empresa o área?'),
+(346, 200, 106, '¿En qué criterio te basas para la toma de decisiones?'),
+(347, 201, 106, '¿Puedes identificar cuál de las siguientes variables tienes conocimiento y control?'),
+(348, 201, 106, '¿Cuál de las siguientes áreas percibe usted puede ser la más prioritaria para monitorear a través de una herramienta que integre la información para la toma de decisiones?'),
+(349, 200, 107, 'Mapeo de la efectividad de los procesos'),
+(350, 200, 107, 'Afectación de los procesos'),
+(351, 200, 107, 'Alargamiento de procesos simples'),
+(352, 201, 108, '¿Por cuáles de los siguientes canales usted expone sus productos o servicios a sus clientes?'),
+(353, 201, 108, '¿A qué cantidad de público identifica que llega su oferta a través de los canales anteriormente mencionados?'),
+(354, 201, 108, '¿Cuál es la naturaleza de la oferta que mejor describe su portafolio?'),
+(355, 200, 108, '¿A través de cuál de las siguientes estrategias hoy tienen definido el aumento de sus ventas?'),
+(356, 201, 108, '¿Cuáles de los siguientes son los canales de pago mediante los cuales hoy recauda los cobros de sus clientes?'),
+(357, 200, 108, '¿Qué tan satisfecho se encuentra con la forma de pago anteriormente mencionada para el recaudo de cobro a sus clientes?'),
+(358, 201, 108, 'Considerando un canal digital para la venta de sus productos y servicios a su mercado objetivo ¿Cuál de las siguientes funcionalidades esperaría encontrar en un espacio digital corporativo? (puede elegir varias)'),
+(359, 201, 109, 'Identifica en su organización algún o algunos procesos que se caractericen por:'),
+(360, 201, 109, '¿Cuál de los siguientes macroprocesos en su organización involucra las características anteriormente mencionadas? (Puede elegir varias)');
+
+
+INSERT INTO pregunta_repetida (id_pregunta_repetida, id_categoria, id_pregunta) VALUES
+(1, 105, 319),
+(2, 105, 320),
+(3, 105, 321),
+(4, 105, 322),
+(5, 105, 323),
+(7, 105, 314),
+(8, 105, 318),
+(9, 106, 308),
+(10, 106, 309),
+(11, 106, 310),
+(12, 106, 325),
+(13, 107, 326),
+(14, 107, 327),
+(15, 107, 328),
+(16, 108, 333),
+(17, 108, 334),
+(18, 108, 335),
+(19, 108, 337),
+(20, 108, 330),
+(21, 108, 329),
+(22, 109, 331),
+(23, 109, 332),
+(24, 108, 336);
+
+
+INSERT INTO tipo_opcion (id_tipo_opcion, tipo_opcion) VALUES
+(900, 'Normal'),
+(901, 'Ninguna de las anteriores'),
+(902, 'Respuesta abierta');
+
+INSERT INTO tipo_pregunta (id_tipo_pregunta, nombre_tipo) VALUES
+(200, 'Selección múltiple única respuesta'),
+(201, 'Selección múltiple múltiples respuestas'),
+(202, 'Verdadero o Falso');
